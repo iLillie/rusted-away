@@ -1,12 +1,12 @@
+use serde_json::Value;
 use std::borrow::Borrow;
 use std::fmt::format;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, ErrorKind};
-use serde_json::Value;
 use unescape::unescape;
 
-const HISTORY_JSON_CSV_INDEX:usize = 37;
+const HISTORY_JSON_CSV_INDEX: usize = 37;
 
 pub fn read_pixel_history(filePath: &str) {
     let file = File::open(filePath).unwrap();
@@ -16,31 +16,36 @@ pub fn read_pixel_history(filePath: &str) {
         match line {
             Ok(line_str) => {
                 parse_pixel_history_line(&line_str);
-            },
+            }
             Err(e) => {
                 println!("{}", e);
             }
         }
     }
-
-
 }
 
 fn parse_escaped_json(escaped_json: &str) -> Result<Value, io::Error> {
-    let json_str = unescape(&escaped_json[1..escaped_json.len()-1]).unwrap();
+    let json_str = unescape(&escaped_json[1..escaped_json.len() - 1]).unwrap();
     let json: Value = serde_json::from_str(&json_str)?;
     Ok(json)
 }
 
-fn parse_pixel_history_line(line: &str)  {
+fn parse_pixel_history_line(line: &str) {
     let json_str = &line[HISTORY_JSON_CSV_INDEX..];
     match parse_escaped_json(json_str) {
         Ok(json) => {
             let pixel_history = json_to_pixel_detail_vec(json);
             for pixel_history in pixel_history {
-                println!("{},{},{},{},{}", pixel_history.last_modified, pixel_history.user_id, pixel_history.user_name, pixel_history.x, pixel_history.y);
+                println!(
+                    "{},{},{},{},{}",
+                    pixel_history.last_modified,
+                    pixel_history.user_id,
+                    pixel_history.user_name,
+                    pixel_history.x,
+                    pixel_history.y
+                );
             }
-        },
+        }
         Err(e) => {
             println!("{}", e);
         }
@@ -57,13 +62,16 @@ fn json_to_pixel_detail_vec(json: Value) -> Vec<PixelHistory> {
                 user_id: "undefined".to_string(),
                 user_name: "undefined".to_string(),
                 x: 0,
-                y: 0
+                y: 0,
             };
-            pixel_history = pixel_keys.iter().map(|(key, value)| parse_pixel_history(key, value).unwrap_or(default_pixel.clone())).collect();
-        },
-        _ => {
-
+            pixel_history = pixel_keys
+                .iter()
+                .map(|(key, value)| {
+                    parse_pixel_history(key, value).unwrap_or(default_pixel.clone())
+                })
+                .collect();
         }
+        _ => {}
     }
     pixel_history
 }
@@ -103,10 +111,9 @@ fn parse_pixel_history(key: &String, pixel_value: &Value) -> Option<PixelHistory
 fn key_to_pixel_position(key: &str) -> Result<(u16, u16), &'static str> {
     let index = key.find("x").ok_or("Failed to find X")?;
     let x = key[1..index].parse::<u16>().unwrap();
-    let y =  key[index + 1..].parse::<u16>().unwrap();
+    let y = key[index + 1..].parse::<u16>().unwrap();
     Ok((x, y))
 }
-
 
 #[derive(Debug, Clone)]
 struct PixelHistory {
@@ -114,8 +121,5 @@ struct PixelHistory {
     user_id: String,
     user_name: String,
     x: u16,
-    y: u16
+    y: u16,
 }
-
-
-
