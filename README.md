@@ -15,4 +15,5 @@ I messed around and had a working solution but it wasn't user friendly, so I dec
 2. Clone the repository.
 3. Run cargo build to get binaries
 
- 
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
