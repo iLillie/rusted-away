@@ -1,6 +1,7 @@
+use std::io;
 use std::io::{Error, ErrorKind};
 
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::data_parser::DataParser;
 use crate::utilities::{detail_key_to_coords, raw_data_str_to_json};
@@ -39,11 +40,10 @@ impl DataParser for DetailDataParser {
                 .map_err(|e| Error::new(ErrorKind::Other, format!("{}", e)))?,
             label: split_line[1].to_string(),
             author: split_line[2].to_string(),
-            data:  json_to_details(data_value)?,
+            data: json_to_details(data_value)?,
         };
 
         Ok(raw_data)
-
     }
 }
 
@@ -55,36 +55,13 @@ fn json_to_details(json: Value) -> Result<Vec<PixelDetail>, Error> {
         .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find data object in json"))?
     {
         let coords = detail_key_to_coords(key)?;
-        let id = json_value["data"][0]["id"]
-            .as_str()
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find id"))?
-            .to_string();
+        let id = to_id(json_value)?.to_string();
+        let last_modified_timestamp = to_timestamp(json_value)? as i64;
+        let user_info = to_user_info(json_value)?;
+        let user_id = to_user_id(user_info)?.to_string();
+        let user_name = to_user_name(user_info)?.to_string();
 
-        let last_modified_timestamp = json_value["data"][0]["data"]["lastModifiedTimestamp"]
-            .as_f64()
-            .ok_or_else(|| {
-                Error::new(ErrorKind::Other, "Could not find last modified timestamp")
-            })? as i64;
-
-        let user_info = json_value["data"][0]["data"]["userInfo"]
-            .as_object()
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Could not user info"))?;
-
-        let user_id = user_info
-            .get("userID")
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find userID"))?
-            .as_str()
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Not valid string"))?
-            .to_string();
-
-        let user_name = user_info
-            .get("username")
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find username"))?
-            .as_str()
-            .ok_or_else(|| Error::new(ErrorKind::Other, "Not valid string"))?
-            .to_string();
-
-        let detail_data = PixelDetail {
+        let pixel_detail = PixelDetail {
             id,
             last_modified_timestamp,
             user_id,
@@ -92,8 +69,42 @@ fn json_to_details(json: Value) -> Result<Vec<PixelDetail>, Error> {
             coords,
         };
 
-        details.push(detail_data);
+        details.push(pixel_detail);
     }
 
     Ok(details)
+}
+
+fn to_user_name(user_info: &Map<String, Value>) -> Result<&str, Error> {
+    user_info
+        .get("username")
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find username"))?
+        .as_str()
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Not valid string"))
+}
+
+fn to_user_id(user_info: &Map<String, Value>) -> Result<&str, Error> {
+    user_info
+        .get("userID")
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find userID"))?
+        .as_str()
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Not valid string"))
+}
+
+fn to_user_info(json_value: &Value) -> Result<&Map<String, Value>, Error> {
+    json_value["data"][0]["data"]["userInfo"]
+        .as_object()
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not user info"))
+}
+
+fn to_timestamp(json_value: &Value) -> Result<f64, Error> {
+    json_value["data"][0]["data"]["lastModifiedTimestamp"]
+        .as_f64()
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find last modified timestamp"))
+}
+
+fn to_id(json_value: &Value) -> Result<&str, io::Error> {
+    json_value["data"][0]["id"]
+        .as_str()
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not find id"))
 }
