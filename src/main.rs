@@ -1,12 +1,12 @@
-mod reddit_data;
 mod utilities;
 mod data_parser;
 mod raw_data_parser;
 mod details_parser;
+mod reddit_parser;
 
 use clap::Parser;
 use crate::data_parser::DataParser;
-use crate::details_parser::DetailDataParser;
+use crate::reddit_parser::RedditDataParser;
 
 // Program to handle the datasets from 2022 r/place event.
 #[derive(Parser)]
@@ -21,13 +21,14 @@ fn main() {
     let args = Cli::parse();
     println!("{}", args.path);
 
-    match details_parser::DetailDataParser::from_file(args.path) {
-        Ok(raw_data) => {
-            for r_data in raw_data.iter() {
-                println!("{:?}", r_data);
+    match reddit_parser::RedditDataParser::from_file(args.path) {
+        Ok(parsed_data) => {
+            for data in parsed_data.iter() {
+                println!("{:?}", data);
             }
         }
         Err(e) => {
+
             println!("{:?}", e);
         }
     }
