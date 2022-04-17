@@ -8,8 +8,8 @@ use unescape::unescape;
 
 const HISTORY_JSON_CSV_INDEX: usize = 37;
 
-pub fn read_pixel_history(filePath: &str) {
-    let file = File::open(filePath).unwrap();
+pub fn read_pixel_history(file_path: &str) {
+    let file = File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let value = reader.lines();
     for line in value {
